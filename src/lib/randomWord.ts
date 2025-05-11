@@ -7,6 +7,6 @@ export default async function getRandomWord() {
             "Content-Type": "application/json",
         },
     })
-    const data = await response.json();
-    return data[0] as string;
+    const data = await response.json()
+    return data[0] as string
 }

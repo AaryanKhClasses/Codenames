@@ -1,9 +1,10 @@
 {
     "name": "codenames",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "private": true,
     "scripts": {
         "dev": "next dev --turbopack",
+        "socket": "node src/server.js",
         "build": "next build",
         "start": "next start",
         "lint": "next lint"
