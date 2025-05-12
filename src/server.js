@@ -17,8 +17,20 @@ io.on('connection', (socket) => {
             const words = ["apple", "banana", "cherry", "date", "elderberry", "fig", "grape", "honeydew", "cat", "dog", "elephant", "frog", "giraffe", "hippo", "iguana", "jaguar", "kangaroo", "lion", "monkey", "newt", "octopus", "penguin", "quail", "rabbit", "snake", "tiger", "umbrella", "vulture", "walrus", "xenops", "yak", "zebra"]
             const shuffledColors = colorDistribution.sort(() => Math.random() - 0.5)
             const shuffledWords = words.sort(() => Math.random() - 0.5)
-            rooms[roomCode] = { colors: shuffledColors, words: shuffledWords }
+            rooms[roomCode] = { 
+                colors: shuffledColors, 
+                words: shuffledWords, 
+                roles: {}
+            }
         }
         socket.emit('initializeGame', rooms[roomCode])
+    })
+
+    socket.on('selectRole', ({ role, username }) => {
+        const roomCode = Array.from(socket.rooms).find((room) => room !== socket.id)
+        if (roomCode) {
+            rooms[roomCode].roles[role] = username
+            io.to(roomCode).emit('roleSelected', { role, username })
+        }
     })
 })

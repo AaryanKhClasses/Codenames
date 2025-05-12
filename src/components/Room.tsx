@@ -17,17 +17,58 @@ export default function Room({ roomCode }: { roomCode: string }) {
     const [shuffledColors, setShuffledColors] = useState<string[]>([])
     const [shuffledWords, setShuffledWords] = useState<string[]>([])
     const [roleSelected, setRoleSelected] = useState(false)
+    const [redOperativeUsername, setRedOperativeUsername] = useState<string | null>(null)
+    const [redSpymasterUsername, setRedSpymasterUsername] = useState<string | null>(null)
+    const [blueOperativeUsername, setBlueOperativeUsername] = useState<string | null>(null)
+    const [blueSpymasterUsername, setBlueSpymasterUsername] = useState<string | null>(null)
 
     useEffect(() => {
         socketRef.current = io('http://localhost:3001')
+
         socketRef.current.on('connect', () => {
             sessionStorage.setItem('roomCode', roomCode)
             socketRef.current.emit('joinRoom', roomCode)
         })
 
-        socketRef.current.on('initializeGame', ({ colors, words }: { colors: string[], words: string[] }) => {
+        socketRef.current.on('initializeGame', ({ colors, words, roles }: { colors: string[], words: string[], roles: { [key: string]: string } }) => {
             setShuffledColors(colors)
             setShuffledWords(words)
+            
+            if (roles.redOp) {
+                setRedOperative(true)
+                setRedOperativeUsername(roles.redOp)
+            }
+            if (roles.redSpy) {
+                setRedSpymaster(true)
+                setRedSpymasterUsername(roles.redSpy)
+            }
+            if (roles.blueOp) {
+                setBlueOperative(true)
+                setBlueOperativeUsername(roles.blueOp)
+            }
+            if (roles.blueSpy) {
+                setBlueSpymaster(true)
+                setBlueSpymasterUsername(roles.blueSpy)
+            }
+        })
+
+        socketRef.current.on('roleSelected', ({ role, username }: { role: string, username: string }) => {
+            if (role === 'redOp') {
+                setRedOperative(true)
+                setRedOperativeUsername(username)
+            }
+            if (role === 'redSpy') {
+                setRedSpymaster(true)
+                setRedSpymasterUsername(username)
+            }
+            if (role === 'blueOp') {
+                setBlueOperative(true)
+                setBlueOperativeUsername(username)
+            }
+            if (role === 'blueSpy') {
+                setBlueSpymaster(true)
+                setBlueSpymasterUsername(username)
+            }
         })
 
         return () => socketRef.current.disconnect()
@@ -36,22 +77,30 @@ export default function Room({ roomCode }: { roomCode: string }) {
     const handleRedOperativeClick = () => {
         sessionStorage.setItem("playerType", "redOp")
         setRedOperative(true)
+        setRedOperativeUsername(username)
         setRoleSelected(true)
+        socketRef.current.emit('selectRole', { role: 'redOp', username })
     }
     const handleRedSpymasterClick = () => {
         sessionStorage.setItem("playerType", "redSpy")
         setRedSpymaster(true)
+        setRedSpymasterUsername(username)
         setRoleSelected(true)
+        socketRef.current.emit('selectRole', { role: 'redSpy', username })
     }
     const handleBlueOperativeClick = () => {
         sessionStorage.setItem("playerType", "blueOp")
         setBlueOperative(true)
+        setBlueOperativeUsername(username)
         setRoleSelected(true)
+        socketRef.current.emit('selectRole', { role: 'blueOp', username })
     }
     const handleBlueSpymasterClick = () => {
         sessionStorage.setItem("playerType", "blueSpy")
         setBlueSpymaster(true)
+        setBlueSpymasterUsername(username)
         setRoleSelected(true)
+        socketRef.current.emit('selectRole', { role: 'blueSpy', username })
     }
 
     return <>
@@ -60,13 +109,13 @@ export default function Room({ roomCode }: { roomCode: string }) {
         <div className="flex flex-row justify-between items-center">
             <div id="red" className="flex flex-col *:justify-center p-2.5 bg-red-500 w-1/4 h-screen">
                 <span>Operative:</span>
-                {redOperative ? <span className="text-white p-2 m-2">{username}</span> :
+                {redOperative ? <span className="text-white p-2 m-2">{redOperativeUsername}</span> :
                     <button className={`bg-yellow-500 text-white rounded-md p-2 m-2 cursor-pointer ${roleSelected ? 'bg-yellow-700 !cursor-not-allowed' : ''}`} onClick={handleRedOperativeClick} disabled={roleSelected}>
                         Join as Operative
                     </button>
                 }
                 <span>Spymaster:</span>
-                {redSpymaster ? <span className="text-white p-2 m-2">{username}</span> :
+                {redSpymaster ? <span className="text-white p-2 m-2">{redSpymasterUsername}</span> :
                     <button className={`bg-yellow-500 text-white rounded-md p-2 m-2 cursor-pointer ${roleSelected ? 'bg-yellow-700 !cursor-not-allowed' : ''}`} onClick={handleRedSpymasterClick} disabled={roleSelected}>
                         Join as Spymaster
                     </button>
@@ -88,13 +137,13 @@ export default function Room({ roomCode }: { roomCode: string }) {
             </div>
             <div id="blue" className="flex flex-col *:justify-center bg-blue-500 p-2.5 w-1/4 h-screen">
                 <span>Operative:</span>
-                {blueOperative ? <span className="text-white p-2 m-2">{username}</span> :
+                {blueOperative ? <span className="text-white p-2 m-2">{blueOperativeUsername}</span> :
                     <button className={`bg-yellow-500 text-white rounded-md p-2 m-2 cursor-pointer ${roleSelected ? 'bg-yellow-700 !cursor-not-allowed' : ''}`} onClick={handleBlueOperativeClick} disabled={roleSelected}>
                         Join as Operative
                     </button>
                 }
                 <span>Spymaster:</span>
-                {blueSpymaster ? <span className="text-white p-2 m-2">{username}</span> :
+                {blueSpymaster ? <span className="text-white p-2 m-2">{blueSpymasterUsername}</span> :
                     <button className={`bg-yellow-500 text-white rounded-md p-2 m-2 cursor-pointer ${roleSelected ? 'bg-yellow-700 !cursor-not-allowed' : ''}`} onClick={handleBlueSpymasterClick} disabled={roleSelected}>
                         Join as Spymaster
                     </button>
