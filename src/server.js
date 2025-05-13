@@ -33,4 +33,11 @@ io.on('connection', (socket) => {
             io.to(roomCode).emit('roleSelected', { role, username })
         }
     })
+
+    socket.on('submitHint', ({ hint, number }) => {
+        const roomCode = Array.from(socket.rooms).find((room) => room !== socket.id)
+        if (roomCode) {
+            io.to(roomCode).emit('hintSubmitted', { hint, number })
+        }
+    })
 })

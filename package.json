@@ -1,10 +1,10 @@
 {
     "name": "codenames",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "private": true,
     "scripts": {
         "dev": "next dev --turbopack",
-        "socket": "node src/server.js",
+        "socket": "nodemon src/server.js",
         "build": "next build",
         "start": "next start",
         "lint": "next lint"
