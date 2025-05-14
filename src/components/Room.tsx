@@ -33,6 +33,11 @@ export default function Room({ roomCode }: { roomCode: string }) {
             socketRef.current.emit('joinRoom', roomCode)
         })
 
+        socketRef.current.on('roomFull', () => {
+            alert("The room is full.")
+            window.location.href = "/"
+        })
+
         socketRef.current.on('initializeGame', ({ colors, words, roles }: { colors: string[], words: string[], roles: { [key: string]: string } }) => {
             setShuffledColors(colors)
             setShuffledWords(words)
@@ -77,6 +82,17 @@ export default function Room({ roomCode }: { roomCode: string }) {
         socketRef.current.on('hintSubmitted', ({ text, number }: { text: string, number: number }) => {
             setHintText(text)
             setHintNumber(number.toString())
+        })
+
+        socketRef.current.on('updateRoles', (roles: { [key: string]: string }) => {
+            setRedOperative(!!roles.redOp)
+            setRedOperativeUsername(roles.redOp || null)
+            setRedSpymaster(!!roles.redSpy)
+            setRedSpymasterUsername(roles.redSpy || null)
+            setBlueOperative(!!roles.blueOp)
+            setBlueOperativeUsername(roles.blueOp || null)
+            setBlueSpymaster(!!roles.blueSpy)
+            setBlueSpymasterUsername(roles.blueSpy || null)
         })
 
         return () => socketRef.current.disconnect()
