@@ -79,8 +79,9 @@ export default function Room({ roomCode }: { roomCode: string }) {
             }
         })
 
-        socketRef.current.on('hintSubmitted', ({ text, number }: { text: string, number: number }) => {
-            setHintText(text)
+        socketRef.current.on('hintSubmitted', ({ hint, number }: { hint: string, number: number }) => {
+            alert("The hint is " + hint + " with number " + number)
+            setHintText(hint)
             setHintNumber(number.toString())
         })
 
@@ -128,16 +129,24 @@ export default function Room({ roomCode }: { roomCode: string }) {
     }
 
     const handleHintSubmit = () => {
+        if(hintText.length == 0) return alert("Please provide a hint.")
         if(hintText.includes(" ")) return alert("Hint must be a single word.")
         if(hintNumber.length == 0) return alert("Please provide a number.")
         if(isNaN(Number(hintNumber))) return alert("Please provide a valid number.")
         if(hintNumber.length > 1) return alert("Number must be a single digit.")
-        socketRef.current.emit('submitHint', { text: hintText, number: parseInt(hintNumber) })
+        socketRef.current.emit('submitHint', { hint: hintText, number: parseInt(hintNumber) })
+        alert("Hint submitted successfully!")
     }
 
     return <>
         {!username && sessionStorage.setItem("username", prompt("Please enter a username") as string)}
-        <h2 className="text-center text-2xl">Username: {username}</h2>
+        <h2 className="text-center text-2xl">Username: {username}
+            { userRole == "redOp" ? <span className="text-red-500"> (Red Operative)</span> :
+            userRole == "redSpy" ? <span className="text-red-500"> (Red Spymaster)</span> :
+            userRole == "blueOp" ? <span className="text-blue-500"> (Blue Operative)</span> :
+            userRole == "blueSpy" ? <span className="text-blue-500"> (Blue Spymaster)</span> : null
+            }
+        </h2>
         <div className="flex flex-row justify-between items-center">
             <div id="red" className="flex flex-col *:justify-center p-2.5 bg-red-500 w-1/4 h-screen">
                 <span>Operative:</span>
@@ -168,9 +177,9 @@ export default function Room({ roomCode }: { roomCode: string }) {
                 ))}
 
                 <div id="hint" className="flex flex-row">
-                    <input className="border border-gray-300 rounded-md p-2 m-2" placeholder="Enter a hint" disabled={userRole == "redSpy" || userRole == "blueSpy" ? false : true} value={hintText} onChange={(e) => setHintText(e.target.value)} />
+                    <input className="border border-gray-300 rounded-md p-2 m-2" disabled={userRole == "redSpy" || userRole == "blueSpy" ? false : true} value={hintText} onChange={(e) => setHintText(e.target.value)} />
                     <input className="border border-gray-300 rounded-md p-2 m-2 w-10" value={hintNumber} disabled={userRole == "redSpy" || userRole == "blueSpy" ? false : true} onChange={(e) => setHintNumber(e.target.value)} />
-                    <button className={`bg-green-500 border-black border-2 text-white rounded-lg p-2 m-2 ${userRole == "redSpy" || userRole == "blueSpy" ? '' : 'hidden'}`} onClick={handleHintSubmit}>Submit</button>
+                    <button className={`bg-green-500 border-black border-2 text-white rounded-lg p-2 m-2 cursor-pointer ${userRole == "redSpy" || userRole == "blueSpy" ? '' : 'hidden'}`} onClick={handleHintSubmit}>Submit</button>
                 </div>
             </div>
             <div id="blue" className="flex flex-col *:justify-center bg-blue-500 p-2.5 w-1/4 h-screen">
