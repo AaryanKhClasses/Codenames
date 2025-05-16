@@ -15,19 +15,19 @@ io.on('connection', (socket) => {
                 "black",
                 "gray", "gray", "gray", "gray", "gray", "gray"
             ]
-            const words = [
-                "apple", "banana", "cherry", "date", "elderberry", "fig", "grape", "honeydew", "cat", "dog", "elephant", "frog", "giraffe", "hippo", "iguana", "jaguar", "kangaroo", "lion", "monkey", "newt", "octopus", "penguin", "quail", "rabbit", "snake", "tiger", "umbrella", "vulture", "walrus", "xenops", "yak", "zebra"
-            ]
-            const shuffledColors = colorDistribution.sort(() => Math.random() - 0.5)
-            const shuffledWords = words.sort(() => Math.random() - 0.5)
-            rooms[roomCode] = {
-                colors: shuffledColors,
-                words: shuffledWords,
-                roles: {}
-            }
+            fetch('https://random-word-api.herokuapp.com/word?number=25&length=5')
+            .then(res => res.json())
+            .then(randomWords => {
+                const shuffledColors = colorDistribution.sort(() => Math.random() - 0.5)
+                rooms[roomCode] = {
+                    colors: shuffledColors,
+                    words: randomWords,
+                    roles: {}
+                }
+                socket.emit('initializeGame', rooms[roomCode])
+            })
         }
         if (io.sockets.adapter.rooms.get(roomCode)?.size > 4) return socket.emit('roomFull')
-        socket.emit('initializeGame', rooms[roomCode])
     })
 
     socket.on('selectRole', ({ role, username }) => {
@@ -36,14 +36,27 @@ io.on('connection', (socket) => {
             rooms[roomCode].roles[role] = username
             socketToUser[socket.id] = { roomCode, role, username }
             io.to(roomCode).emit('roleSelected', { role, username })
+            if (Object.keys(rooms[roomCode].roles).length === 4) io.to(roomCode).emit('gameStarted')
         }
     })
 
-    socket.on('submitHint', ({ hint, number }) => {
-        console.log(hint, number)
+    socket.on('submitHint', ({ hint, number, turn }) => {
         const roomCode = Array.from(socket.rooms).find((room) => room !== socket.id)
         if (roomCode) {
-            io.to(roomCode).emit('hintSubmitted', { hint, number })
+            let nextTurn
+            if(turn == "redSpy") nextTurn = "redOp"
+            else if(turn == "blueSpy") nextTurn = "blueOp"
+            io.to(roomCode).emit('hintSubmitted', { hint, number, turn: nextTurn })
+        }
+    })
+
+    socket.on('endTurn', ({ turn }) => {
+        const roomCode = Array.from(socket.rooms).find((room) => room !== socket.id)
+        if (roomCode) {
+            let nextTurn
+            if(turn === "redOp") nextTurn = "blueSpy"
+            else if(turn === "blueOp") nextTurn = "redSpy"
+            io.to(roomCode).emit('turnEnded', { turn: nextTurn })
         }
     })
 

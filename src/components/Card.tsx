@@ -4,6 +4,7 @@ type CardProps = {
     color: string
     word: string
     isRevealed: boolean
+    onClick: () => void
 }
 
 export default function Card(props: CardProps) {
@@ -23,7 +24,7 @@ export default function Card(props: CardProps) {
             ? colorClassMap[props.color] || "bg-gray-500"
             : "bg-gray-500"
 
-    return <button className={`flex flex-col justify-center items-center p-2.5 min-w-[100px] border-black border-1 rounded-md m-2 cursor-pointer ${backgroundColor}`}>
+    return <button className={`flex flex-col justify-center items-center p-2.5 min-w-[100px] border-black border-1 rounded-md m-2 cursor-pointer ${backgroundColor}`} onClick={props.onClick}>
         {props.word}
     </button>
 }

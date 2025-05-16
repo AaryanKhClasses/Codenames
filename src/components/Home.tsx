@@ -15,9 +15,7 @@ export default function Home() {
 
     const handleJoinRoom = () => {
         if(username.length < 3) return alert("Username must be at least 3 characters long.")
-        if(roomCode.length == 0) return alert("Please provide a room code.")
-        // TODO: validation
-    
+        if(roomCode.length == 0) return alert("Please provide a room code.")  
         sessionStorage.setItem("username", username)
         location.href = `/${roomCode}`
     }

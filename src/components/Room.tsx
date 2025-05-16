@@ -25,6 +25,10 @@ export default function Room({ roomCode }: { roomCode: string }) {
     const [hintText, setHintText] = useState<string>("")
     const [hintNumber, setHintNumber] = useState<string>("")
 
+    const [isGameStarted, setIsGameStarted] = useState(false)
+    type TurnType = 'redSpy' | 'redOp' | 'blueSpy' | 'blueOp'
+    const [turn, setTurn] = useState<TurnType>('blueSpy')
+
     useEffect(() => {
         socketRef.current = io('http://localhost:3001')
 
@@ -33,6 +37,7 @@ export default function Room({ roomCode }: { roomCode: string }) {
             socketRef.current.emit('joinRoom', roomCode)
         })
 
+        socketRef.current.on('gameStarted', () => setIsGameStarted(true))
         socketRef.current.on('roomFull', () => {
             alert("The room is full.")
             window.location.href = "/"
@@ -79,10 +84,19 @@ export default function Room({ roomCode }: { roomCode: string }) {
             }
         })
 
-        socketRef.current.on('hintSubmitted', ({ hint, number }: { hint: string, number: number }) => {
-            alert("The hint is " + hint + " with number " + number)
-            setHintText(hint)
+        socketRef.current.on('hintSubmitted', ({ hint, number, turn }: { hint: string, number: number, turn: TurnType }) => {
+            // TODO: Replace this alert with a more friendly modal
+            alert("The hint is " + hint.toUpperCase() + " with number " + number)
+            setHintText(hint.toUpperCase())
             setHintNumber(number.toString())
+            setTurn(turn)
+        })
+
+        socketRef.current.on('turnEnded', ({ turn }: { turn: TurnType }) => {
+            // TODO: Alert that the turn has ended using a modal
+            setHintText("")
+            setHintNumber("")
+            setTurn(turn)
         })
 
         socketRef.current.on('updateRoles', (roles: { [key: string]: string }) => {
@@ -134,8 +148,17 @@ export default function Room({ roomCode }: { roomCode: string }) {
         if(hintNumber.length == 0) return alert("Please provide a number.")
         if(isNaN(Number(hintNumber))) return alert("Please provide a valid number.")
         if(hintNumber.length > 1) return alert("Number must be a single digit.")
-        socketRef.current.emit('submitHint', { hint: hintText, number: parseInt(hintNumber) })
+        socketRef.current.emit('submitHint', { hint: hintText, number: parseInt(hintNumber), turn })
         alert("Hint submitted successfully!")
+    }
+
+    const handleEndTurnSubmit = () => {
+        socketRef.current.emit('endTurn', { turn })
+    }
+
+    const handleCardClick = () => {
+        if(!isGameStarted || userRole == "redSpy" || userRole == "blueSpy" || (userRole == "redOp" && turn != "redOp") || (userRole == "blueOp" && turn != "blueOp")) return
+        // TODO: Implement card click logic
     }
 
     return <>
@@ -163,6 +186,14 @@ export default function Room({ roomCode }: { roomCode: string }) {
                 }
             </div>
             <div id="deck" className="flex flex-col justify-center items-center bg-gray-500 w-1/2 h-screen">
+                <div>
+                    { isGameStarted ? turn == 'redSpy' ? <span className="text-red-500 text-2xl font-bold">Red Spymaster is Thinking...</span> :
+                        turn == 'redOp' ? <span className="text-red-500 text-2xl font-bold">Red Operative is Guessing...</span> :
+                        turn == 'blueSpy' ? <span className="text-blue-500 text-2xl font-bold">Blue Spymaster is Thinking...</span> :
+                        turn == 'blueOp' ? <span className="text-blue-500 text-2xl font-bold">Blue Operative is Guessing...</span> : null
+                    : <span className="text-gray-300 text-2xl font-bold">Waiting for game to start...</span>}
+                </div>
+
                 {Array.from({ length: 5 }, (_, i) => (
                     <div key={i} className="flex flex-row justify-center items-center p-2 m-2">
                         {Array.from({ length: 5 }, (_, j) => (
@@ -171,15 +202,17 @@ export default function Room({ roomCode }: { roomCode: string }) {
                                 color={shuffledColors[i * 5 + j]}
                                 word={shuffledWords[i * 5 + j]}
                                 isRevealed={false}
+                                onClick={handleCardClick}
                             />
                         ))}
                     </div>
                 ))}
 
                 <div id="hint" className="flex flex-row">
-                    <input className="border border-gray-300 rounded-md p-2 m-2" disabled={userRole == "redSpy" || userRole == "blueSpy" ? false : true} value={hintText} onChange={(e) => setHintText(e.target.value)} />
-                    <input className="border border-gray-300 rounded-md p-2 m-2 w-10" value={hintNumber} disabled={userRole == "redSpy" || userRole == "blueSpy" ? false : true} onChange={(e) => setHintNumber(e.target.value)} />
-                    <button className={`bg-green-500 border-black border-2 text-white rounded-lg p-2 m-2 cursor-pointer ${userRole == "redSpy" || userRole == "blueSpy" ? '' : 'hidden'}`} onClick={handleHintSubmit}>Submit</button>
+                    <input className="border border-gray-300 rounded-md p-2 m-2" disabled={(userRole == "redSpy" && turn == "redSpy") || (userRole == "blueSpy" && turn == "blueSpy") ? false : true} value={hintText} placeholder="Enter a Hint" onChange={(e) => setHintText(e.target.value.toUpperCase())} />
+                    <input className="border border-gray-300 rounded-md p-2 m-2 w-10" value={hintNumber} disabled={(userRole == "redSpy" && turn == "redSpy") || (userRole == "blueSpy" && turn == "blueSpy") ? false : true} onChange={(e) => setHintNumber(e.target.value)} />
+                    { userRole == "redSpy" && turn == "redSpy" || userRole == "blueSpy" && turn == "blueSpy" ? <button className={"bg-green-500 border-black border-2 text-white rounded-lg p-2 m-2 cursor-pointer"} onClick={handleHintSubmit}>Submit</button> :
+                        userRole == "redOp" && turn == "redOp" || userRole == "blueOp" && turn == "blueOp" ? <button className="bg-green-500 border-black border-2 text-white rounded-lg p-2 m-2 cursor-pointer" onClick={handleEndTurnSubmit}>End Turn</button> : null }
                 </div>
             </div>
             <div id="blue" className="flex flex-col *:justify-center bg-blue-500 p-2.5 w-1/4 h-screen">
