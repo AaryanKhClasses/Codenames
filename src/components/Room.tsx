@@ -18,6 +18,7 @@ export default function Room({ roomCode }: { roomCode: string }) {
     const [shuffledColors, setShuffledColors] = useState<string[]>([])
     const [shuffledWords, setShuffledWords] = useState<string[]>([])
     const [roleSelected, setRoleSelected] = useState(false)
+    const [revealedCards, setRevealedCards] = useState<boolean[]>(Array(25).fill(false))
     const [redOperativeUsername, setRedOperativeUsername] = useState<string | null>(null)
     const [redSpymasterUsername, setRedSpymasterUsername] = useState<string | null>(null)
     const [blueOperativeUsername, setBlueOperativeUsername] = useState<string | null>(null)
@@ -26,7 +27,7 @@ export default function Room({ roomCode }: { roomCode: string }) {
     const [hintNumber, setHintNumber] = useState<string>("")
 
     const [isGameStarted, setIsGameStarted] = useState(false)
-    type TurnType = 'redSpy' | 'redOp' | 'blueSpy' | 'blueOp'
+    type TurnType = 'redSpy' | 'redOp' | 'blueSpy' | 'blueOp' | 'none'
     const [turn, setTurn] = useState<TurnType>('blueSpy')
 
     useEffect(() => {
@@ -99,6 +100,25 @@ export default function Room({ roomCode }: { roomCode: string }) {
             setTurn(turn)
         })
 
+        socketRef.current.on('cardRevealed', ({ index, turn }: { index: number, turn: TurnType }) => {
+            setRevealedCards(prev => {
+                const updated = [...prev]
+                updated[index] = true
+                return updated
+            })
+            if(turn == "redSpy" || turn == "blueSpy") {
+                setHintText("")
+                setHintNumber("")
+            }
+            setTurn(turn)
+        })
+
+        socketRef.current.on('gameOver', ({ currentTurn }: { currentTurn: TurnType }) => {
+            let teamName = currentTurn === 'redSpy' || currentTurn === 'redOp' ? 'Blue' : 'Red'
+            alert("Game Over! " + teamName + " Team won!")
+            setTurn('none')
+        })
+
         socketRef.current.on('updateRoles', (roles: { [key: string]: string }) => {
             setRedOperative(!!roles.redOp)
             setRedOperativeUsername(roles.redOp || null)
@@ -156,9 +176,14 @@ export default function Room({ roomCode }: { roomCode: string }) {
         socketRef.current.emit('endTurn', { turn })
     }
 
-    const handleCardClick = () => {
+    const handleCardClick = (index: number) => {
         if(!isGameStarted || userRole == "redSpy" || userRole == "blueSpy" || (userRole == "redOp" && turn != "redOp") || (userRole == "blueOp" && turn != "blueOp")) return
-        // TODO: Implement card click logic
+        setRevealedCards(prev => {
+            const updated = [...prev]
+            updated[index] = true
+            return updated
+        })
+        socketRef.current.emit('revealCard', { index, color: shuffledColors[index], turn })
     }
 
     return <>
@@ -196,22 +221,25 @@ export default function Room({ roomCode }: { roomCode: string }) {
 
                 {Array.from({ length: 5 }, (_, i) => (
                     <div key={i} className="flex flex-row justify-center items-center p-2 m-2">
-                        {Array.from({ length: 5 }, (_, j) => (
-                            <Card
-                                key={j}
-                                color={shuffledColors[i * 5 + j]}
-                                word={shuffledWords[i * 5 + j]}
-                                isRevealed={false}
-                                onClick={handleCardClick}
-                            />
-                        ))}
+                        {Array.from({ length: 5 }, (_, j) => {
+                            const index = i * 5 + j
+                            return (
+                                <Card
+                                    key={j}
+                                    color={shuffledColors[index]}
+                                    word={shuffledWords[index]}
+                                    isRevealed={revealedCards[index]}
+                                    onClick={() => handleCardClick(index)}
+                                />
+                            )
+                        })}
                     </div>
                 ))}
 
                 <div id="hint" className="flex flex-row">
                     <input className="border border-gray-300 rounded-md p-2 m-2" disabled={(userRole == "redSpy" && turn == "redSpy") || (userRole == "blueSpy" && turn == "blueSpy") ? false : true} value={hintText} placeholder="Enter a Hint" onChange={(e) => setHintText(e.target.value.toUpperCase())} />
                     <input className="border border-gray-300 rounded-md p-2 m-2 w-10" value={hintNumber} disabled={(userRole == "redSpy" && turn == "redSpy") || (userRole == "blueSpy" && turn == "blueSpy") ? false : true} onChange={(e) => setHintNumber(e.target.value)} />
-                    { userRole == "redSpy" && turn == "redSpy" || userRole == "blueSpy" && turn == "blueSpy" ? <button className={"bg-green-500 border-black border-2 text-white rounded-lg p-2 m-2 cursor-pointer"} onClick={handleHintSubmit}>Submit</button> :
+                    { isGameStarted && (userRole == "redSpy" && turn == "redSpy" || userRole == "blueSpy" && turn == "blueSpy") ? <button className={"bg-green-500 border-black border-2 text-white rounded-lg p-2 m-2 cursor-pointer"} onClick={handleHintSubmit}>Submit</button> :
                         userRole == "redOp" && turn == "redOp" || userRole == "blueOp" && turn == "blueOp" ? <button className="bg-green-500 border-black border-2 text-white rounded-lg p-2 m-2 cursor-pointer" onClick={handleEndTurnSubmit}>End Turn</button> : null }
                 </div>
             </div>

@@ -28,6 +28,7 @@ io.on('connection', (socket) => {
             })
         }
         if (io.sockets.adapter.rooms.get(roomCode)?.size > 4) return socket.emit('roomFull')
+        socket.emit('initializeGame', rooms[roomCode])
     })
 
     socket.on('selectRole', ({ role, username }) => {
@@ -57,6 +58,17 @@ io.on('connection', (socket) => {
             if(turn === "redOp") nextTurn = "blueSpy"
             else if(turn === "blueOp") nextTurn = "redSpy"
             io.to(roomCode).emit('turnEnded', { turn: nextTurn })
+        }
+    })
+
+    socket.on('revealCard', ({ index, color, turn }) => {
+        const roomCode = Array.from(socket.rooms).find((room) => room !== socket.id)
+        if (roomCode) {
+            let nextTurn = turn
+            if((turn === "redOp" && color !== "red")) nextTurn = "blueSpy"
+            else if((turn === "blueOp" && color !== "blue")) nextTurn = "redSpy"
+            if(color === "black") return io.to(roomCode).emit('gameOver', { currentTurn: turn })
+            io.to(roomCode).emit('cardRevealed', { index, turn: nextTurn })
         }
     })
 
