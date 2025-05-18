@@ -22,7 +22,8 @@ io.on('connection', (socket) => {
                 rooms[roomCode] = {
                     colors: shuffledColors,
                     words: randomWords,
-                    roles: {}
+                    roles: {},
+                    revealed: []
                 }
                 socket.emit('initializeGame', rooms[roomCode])
             })
@@ -64,10 +65,19 @@ io.on('connection', (socket) => {
     socket.on('revealCard', ({ index, color, turn }) => {
         const roomCode = Array.from(socket.rooms).find((room) => room !== socket.id)
         if (roomCode) {
+            if (!rooms[roomCode].revealed) rooms[roomCode].revealed = []
+            if (!rooms[roomCode].revealed.includes(index)) rooms[roomCode].revealed.push(index)
+
+            const revealedIndices = rooms[roomCode].revealed
+            const colors = rooms[roomCode].colors
+            const redRevealed = revealedIndices.filter(i => colors[i] === "red").length
+            const blueRevealed = revealedIndices.filter(i => colors[i] === "blue").length
+
             let nextTurn = turn
             if((turn === "redOp" && color !== "red")) nextTurn = "blueSpy"
             else if((turn === "blueOp" && color !== "blue")) nextTurn = "redSpy"
             if(color === "black") return io.to(roomCode).emit('gameOver', { currentTurn: turn })
+            if (redRevealed === 9 || blueRevealed === 9) return io.to(roomCode).emit('gameOver', { currentTurn: redRevealed === 9 ? "blueOp" : "redOp" })
             io.to(roomCode).emit('cardRevealed', { index, turn: nextTurn })
         }
     })

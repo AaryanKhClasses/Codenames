@@ -27,8 +27,9 @@ export default function Room({ roomCode }: { roomCode: string }) {
     const [hintNumber, setHintNumber] = useState<string>("")
 
     const [isGameStarted, setIsGameStarted] = useState(false)
-    type TurnType = 'redSpy' | 'redOp' | 'blueSpy' | 'blueOp' | 'none'
+    type TurnType = 'redSpy' | 'redOp' | 'blueSpy' | 'blueOp' | 'gameOver'
     const [turn, setTurn] = useState<TurnType>('blueSpy')
+    const [winningTeam, setWinningTeam] = useState<string>("")
 
     useEffect(() => {
         socketRef.current = io('http://localhost:3001')
@@ -116,7 +117,8 @@ export default function Room({ roomCode }: { roomCode: string }) {
         socketRef.current.on('gameOver', ({ currentTurn }: { currentTurn: TurnType }) => {
             let teamName = currentTurn === 'redSpy' || currentTurn === 'redOp' ? 'Blue' : 'Red'
             alert("Game Over! " + teamName + " Team won!")
-            setTurn('none')
+            setTurn('gameOver')
+            setWinningTeam(teamName)
         })
 
         socketRef.current.on('updateRoles', (roles: { [key: string]: string }) => {
@@ -217,6 +219,7 @@ export default function Room({ roomCode }: { roomCode: string }) {
                         turn == 'blueSpy' ? <span className="text-blue-500 text-2xl font-bold">Blue Spymaster is Thinking...</span> :
                         turn == 'blueOp' ? <span className="text-blue-500 text-2xl font-bold">Blue Operative is Guessing...</span> : null
                     : <span className="text-gray-300 text-2xl font-bold">Waiting for game to start...</span>}
+                    { turn == 'gameOver' ? <span className="text-gray-300 text-2xl font-bold">Game Over! The <span className={`text-${winningTeam.toLowerCase()}-500 text-2xl font-bold`}>{winningTeam}</span> Team Wins!</span> : null }
                 </div>
 
                 {Array.from({ length: 5 }, (_, i) => (
@@ -229,6 +232,7 @@ export default function Room({ roomCode }: { roomCode: string }) {
                                     color={shuffledColors[index]}
                                     word={shuffledWords[index]}
                                     isRevealed={revealedCards[index]}
+                                    gameEnded={turn == "gameOver"}
                                     onClick={() => handleCardClick(index)}
                                 />
                             )
